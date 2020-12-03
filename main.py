@@ -1,5 +1,5 @@
-from core.Constraint import ExactSumConstraint, MaxSumConstraint
-from core import CSP, BacktrackingSolver, AllDifferentConstraint
+from core.ConstraintSolver import MinConflictsSolver
+from core import CSP, BacktrackingSolver, ExactSumConstraint
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
 
     # Solve
 
-    solver = BacktrackingSolver(csp)
+    solver = MinConflictsSolver(csp)
     solution = solver.solve()
 
     print(' - Solution -')

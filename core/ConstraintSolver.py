@@ -3,7 +3,7 @@ from .CSP import CSP
 from .Variable import ValueType, Variable
 from .Assignment import Assignment
 from .Inference import MAC
-from random import random
+from random import choice, shuffle
 
 
 class ConstraintSolver:
@@ -15,41 +15,6 @@ class ConstraintSolver:
         keys2 = set(self.csp.variables.keys())
 
         return keys1 == keys2
-
-    def _create_values_list(self, assignment: Assignment, name: str, value: ValueType, names: List[str]):
-        values = []
-
-        for n in names:
-            if n == name:
-                values.append(value)
-            elif n in assignment and assignment[n]:
-                values.append(assignment[n])
-            else:
-                return None
-
-        return values
-
-    def _is_k_consistent(self, assignment: Assignment, name: str, value: ValueType, k: int):
-        constraints = self.csp.get_related_constraints(name, k)
-
-        for constraint, names in constraints:
-            values = self._create_values_list(assignment, name, value, names)
-
-            if values and not constraint.is_satisfied(*values):
-                return False
-
-        return True
-
-    def _is_consistent(self, assignment: Assignment, name: str, value: ValueType):
-        # test arc consistency
-        if not self._is_k_consistent(assignment, name, value, 2):
-            return False
-
-        # test global consistency
-        if not self._is_k_consistent(assignment, name, value, 0):
-            return False
-
-        return True
 
     def _make_node_consistent(self, name: str):
         constraints = self.csp.get_related_constraints(name, 1)
@@ -76,6 +41,27 @@ class ConstraintSolver:
 
         return inferences
 
+    def solve(self) -> Assignment:
+        raise NotImplementedError()
+
+
+class BacktrackingSolver(ConstraintSolver):
+    def __init__(self, csp: CSP) -> None:
+        super().__init__(csp)
+
+    def _create_parameters(self, assignment: Assignment, name: str, value: ValueType, names: List[str]):
+        values = []
+
+        for n in names:
+            if n == name:
+                values.append(value)
+            elif n in assignment:
+                values.append(assignment[n])
+            else:
+                return None
+
+        return values
+
     def _select_unassigned_variable(self, assignments) -> Variable:
         variable_names = list(
             set(self.csp.variables.keys()) - set(assignments.keys()))
@@ -97,13 +83,19 @@ class ConstraintSolver:
         # todo: perform value ordering
         return domain
 
-    def solve(self) -> Assignment:
-        raise NotImplementedError()
+    def _is_k_consistent(self, assignment: Assignment, name: str, value: ValueType, k: int):
+        constraints = self.csp.get_related_constraints(name, k)
 
+        for constraint, names in constraints:
+            values = self._create_parameters(assignment, name, value, names)
 
-class BacktrackingSolver(ConstraintSolver):
-    def __init__(self, csp: CSP) -> None:
-        super().__init__(csp)
+            if values and not constraint.is_satisfied(*values):
+                return False
+
+        return True
+
+    def _is_consistent(self, assignment: Assignment, name: str, value: ValueType):
+        return self._is_k_consistent(assignment, name, value, 2) and self._is_k_consistent(assignment, name, value, 0)
 
     def _backtrack(self, assignment):
         if self._is_complete(assignment):
@@ -153,22 +145,88 @@ class BacktrackingSolver(ConstraintSolver):
 
 
 class MinConflictsSolver(ConstraintSolver):
-    def __init__(self, csp: CSP, steps=1000) -> None:
+    def __init__(self, csp: CSP, steps=500) -> None:
         super().__init__(csp)
         self._steps = steps
 
-    def solve(self) -> Assignment:
-        assignment = {}
+    def _create_parameters(self, assignment: Assignment, names: List[str]):
+        values = []
 
-        # Initial assignment
+        for n in names:
+            if n in assignment:
+                values.append(assignment[n])
+            else:
+                return None
 
-        for name, variable in self.csp.variables:
-            assignment[name] = random.choice(variable.domain)
+        return values
 
-        for _ in range(self._steps):
-            conflicted = False
+    def _is_k_consistent(self, assignment: Assignment, name: str, k: int):
+        constraints = self.csp.get_related_constraints(name, k)
 
-            if not conflicted:
-                return assignment
+        for constraint, names in constraints:
+            values = self._create_parameters(assignment, names)
+
+            if values and not constraint.is_satisfied(*values):
+                return False
+
+        return True
+
+    def _is_consistent(self, assignment: Assignment, name: str):
+        return self._is_k_consistent(assignment, name, 2) and self._is_k_consistent(assignment, name, 0)
+
+    def _get_conflicted_variable(self, assignment: Assignment):
+        names = list(self.csp.variables.keys())
+        shuffle(names)
+
+        for name in names:
+            if not self._is_consistent(assignment, name):
+                return name
 
         return None
+
+    def _value_with_min_conflicts(self, name: str, assignment: Assignment):
+        domain = self.csp.domains[name].values
+        conflicts_count = {}
+
+        for value in domain:
+            conflicts_count[value] = 0
+
+            for constraint, names in self.csp.constraints:
+                assignment[name] = value
+                values = self._create_parameters(assignment, names)
+
+                if values and not constraint.is_satisfied(*values):
+                    conflicts_count[value] += 1
+
+        min_value = min(conflicts_count, key=conflicts_count.get)
+        return min_value
+
+    def _min_conflicts(self):
+        assignment = {}
+
+        # Initial complete assignment
+        for name, domain in self.csp.domains.items():
+            assignment[name] = choice(domain.values)
+
+        for _ in range(self._steps):
+            name = self._get_conflicted_variable(assignment)
+            if not name:
+                return assignment
+
+            # get least conflict value
+            value = self._value_with_min_conflicts(name, assignment)
+
+            # set value
+            assignment[name] = value
+            self.csp.variables[name].value = value
+
+        return None
+
+    def solve(self) -> Assignment:
+        for name in self.csp.variables.keys():
+            is_consistent = self._make_node_consistent(name)
+
+            if not is_consistent:
+                return False
+
+        return self._min_conflicts()
