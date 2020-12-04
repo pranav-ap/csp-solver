@@ -17,7 +17,7 @@ def main():
 
     # Solve
 
-    solver = MinConflictsSolver(csp)
+    solver = MinConflictsSolver(csp, 2000)
     solution = solver.solve()
 
     print(' - Solution -')

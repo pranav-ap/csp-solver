@@ -10,25 +10,34 @@ class ConstraintSolver:
     def __init__(self, csp: CSP) -> None:
         self.csp = csp
 
+    def _make_node_consistent(self):
+        for name in self.csp.variables.keys():
+            constraints = self.csp.get_related_constraints(name, 1)
+
+            for constraint, [name] in constraints:
+                X = self.csp.domains[name]
+                revised_domain = [x for x in X if constraint.is_satisfied(x)]
+
+                if not revised_domain:
+                    return False
+
+                self.csp.domains[name].replace(revised_domain)
+
+        return True
+
+    def solve(self) -> Assignment:
+        raise NotImplementedError()
+
+
+class BacktrackingSolver(ConstraintSolver):
+    def __init__(self, csp: CSP) -> None:
+        super().__init__(csp)
+
     def _is_complete(self, assignment):
         keys1 = set(assignment.keys())
         keys2 = set(self.csp.variables.keys())
 
         return keys1 == keys2
-
-    def _make_node_consistent(self, name: str):
-        constraints = self.csp.get_related_constraints(name, 1)
-
-        for constraint, [name] in constraints:
-            X = self.csp.domains[name]
-            revised_domain = [x for x in X if constraint.is_satisfied(x)]
-
-            if not revised_domain:
-                return False
-
-            self.csp.domains[name].replace(revised_domain)
-
-        return True
 
     def _inference(self, name: str):
         is_consistent = MAC(self.csp, name)
@@ -40,14 +49,6 @@ class ConstraintSolver:
             name: domain[0] for name, domain in self.csp.domains.items() if len(domain) == 1}
 
         return inferences
-
-    def solve(self) -> Assignment:
-        raise NotImplementedError()
-
-
-class BacktrackingSolver(ConstraintSolver):
-    def __init__(self, csp: CSP) -> None:
-        super().__init__(csp)
 
     def _create_parameters(self, assignment: Assignment, name: str, value: ValueType, names: List[str]):
         values = []
@@ -135,11 +136,10 @@ class BacktrackingSolver(ConstraintSolver):
     def solve(self) -> Union[Assignment, bool]:
         assignment = {}
 
-        for name in self.csp.variables.keys():
-            is_consistent = self._make_node_consistent(name)
+        is_consistent = self._make_node_consistent()
 
-            if not is_consistent:
-                return False
+        if not is_consistent:
+            return False
 
         return self._backtrack(assignment)
 
@@ -160,35 +160,10 @@ class MinConflictsSolver(ConstraintSolver):
 
         return values
 
-    def _is_k_consistent(self, assignment: Assignment, name: str, k: int):
-        constraints = self.csp.get_related_constraints(name, k)
-
-        for constraint, names in constraints:
-            values = self._create_parameters(assignment, names)
-
-            if values and not constraint.is_satisfied(*values):
-                return False
-
-        return True
-
-    def _is_consistent(self, assignment: Assignment, name: str):
-        return self._is_k_consistent(assignment, name, 2) and self._is_k_consistent(assignment, name, 0)
-
-    def _get_conflicted_variable(self, assignment: Assignment):
-        names = list(self.csp.variables.keys())
-        shuffle(names)
-
-        for name in names:
-            if not self._is_consistent(assignment, name):
-                return name
-
-        return None
-
     def _value_with_min_conflicts(self, name: str, assignment: Assignment):
-        domain = self.csp.domains[name].values
         conflicts_count = {}
 
-        for value in domain:
+        for value in self.csp.domains[name].values:
             conflicts_count[value] = 0
 
             for constraint, names in self.csp.constraints:
@@ -201,6 +176,31 @@ class MinConflictsSolver(ConstraintSolver):
         min_value = min(conflicts_count, key=conflicts_count.get)
         return min_value
 
+    def _get_conflicted_variable(self, conflicted_variables):
+        names = list(conflicted_variables.keys())
+        shuffle(names)
+
+        for name in names:
+            if conflicted_variables[name]:
+                return name
+
+        return None
+
+    def _is_solution(self, conflicted_variables):
+        return all([value == 0 for value in conflicted_variables.values()])
+
+    def _get_conflicted_variables(self, assignment: Assignment):
+        conflicted_variables = {key: 0 for key in assignment.keys()}
+
+        for constraint, names in self.csp.constraints:
+            values = self._create_parameters(assignment, names)
+
+            if values and not constraint.is_satisfied(*values):
+                for name in names:
+                    conflicted_variables[name] += 1
+
+        return conflicted_variables
+
     def _min_conflicts(self):
         assignment = {}
 
@@ -209,24 +209,24 @@ class MinConflictsSolver(ConstraintSolver):
             assignment[name] = choice(domain.values)
 
         for _ in range(self._steps):
-            name = self._get_conflicted_variable(assignment)
-            if not name:
-                return assignment
+            conflicted_variables = self._get_conflicted_variables(assignment)
 
-            # get least conflict value
+            if self._is_solution(conflicted_variables):
+                return assignment, True
+
+            name = self._get_conflicted_variable(conflicted_variables)
             value = self._value_with_min_conflicts(name, assignment)
 
             # set value
             assignment[name] = value
             self.csp.variables[name].value = value
 
-        return None
+        return assignment, False
 
     def solve(self) -> Assignment:
-        for name in self.csp.variables.keys():
-            is_consistent = self._make_node_consistent(name)
+        is_consistent = self._make_node_consistent()
 
-            if not is_consistent:
-                return False
+        if not is_consistent:
+            return {}, False
 
         return self._min_conflicts()
