@@ -1,3 +1,6 @@
+from core.Variable import ValueType
+
+
 class Constraint:
     def is_satisfied(self, *scope) -> bool:
         pass
@@ -11,22 +14,69 @@ class FunctionConstraint(Constraint):
         return self._func(*scope)
 
 
-class GlobalConstraint(Constraint):
+# Equality
+
+
+class AllDifferentConstraint(Constraint):
     def is_satisfied(self, *scope) -> bool:
-        pass
+        list_len = len(list(scope))
+        set_len = len(set(scope))
+
+        return list_len == set_len
 
 
-class AllDifferentConstraint(GlobalConstraint):
+class AllEqualConstraint(Constraint):
     def is_satisfied(self, *scope) -> bool:
-        return len(list(scope)) == len(set(scope))
+        set_len = len(set(scope))
+        return set_len == 1
 
 
-class AllEqualConstraint(GlobalConstraint):
+class AllEqualToConstraint(Constraint):
+    def __init__(self, value: ValueType) -> None:
+        self.value = value
+
     def is_satisfied(self, *scope) -> bool:
-        return len(set(scope)) == 1
+        length = scope.count(self.value)
+        return length == len(scope)
 
 
-class MaxSumConstraint(GlobalConstraint):
+# Value Count
+
+
+class ValueCountEqualToConstraint(Constraint):
+    def __init__(self, limit: int, value: ValueType) -> None:
+        self.limit = limit
+        self.value = value
+
+    def is_satisfied(self, *scope) -> bool:
+        length = scope.count(self.value)
+        return length == self.limit
+
+
+class ValueCountUpperLimitConstraint(Constraint):
+    def __init__(self, upper_limit: int, value: ValueType) -> None:
+        self.upper_limit = upper_limit
+        self.value = value
+
+    def is_satisfied(self, *scope) -> bool:
+        length = scope.count(self.value)
+        return length <= self.upper_limit
+
+
+class ValueCountLowerLimitConstraint(Constraint):
+    def __init__(self, lower_limit: int, value: ValueType) -> None:
+        self.lower_limit = lower_limit
+        self.value = value
+
+    def is_satisfied(self, *scope) -> bool:
+        length = scope.count(self.value)
+        return length >= self.lower_limit
+
+
+# Sum
+
+
+class MaxSumConstraint(Constraint):
     def __init__(self, max_sum: int) -> None:
         self.max_sum = max_sum
 
@@ -34,7 +84,7 @@ class MaxSumConstraint(GlobalConstraint):
         return sum(list(scope)) <= self.max_sum
 
 
-class MinSumConstraint(GlobalConstraint):
+class MinSumConstraint(Constraint):
     def __init__(self, min_sum: int) -> None:
         self.min_sum = min_sum
 
@@ -42,7 +92,7 @@ class MinSumConstraint(GlobalConstraint):
         return sum(list(scope)) >= self.min_sum
 
 
-class ExactSumConstraint(GlobalConstraint):
+class ExactSumConstraint(Constraint):
     def __init__(self, exact_sum: int) -> None:
         self.exact_sum = exact_sum
 

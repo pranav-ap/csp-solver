@@ -1,5 +1,6 @@
 from typing import Union
 
+NameType = Union[str, int]
 ValueType = Union[str, int]
 
 

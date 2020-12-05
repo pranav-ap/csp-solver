@@ -1,6 +1,6 @@
 from typing import List, Union
 from .CSP import CSP
-from .Variable import ValueType, Variable
+from .Variable import ValueType, Variable, NameType
 from .Assignment import Assignment
 from .Inference import MAC
 from random import choice, shuffle
@@ -11,7 +11,7 @@ class ConstraintSolver:
         self.csp = csp
 
     def _make_node_consistent(self):
-        for name in self.csp.variables.keys():
+        for name in self.csp.variables:
             constraints = self.csp.get_related_constraints(name, 1)
 
             for constraint, [name] in constraints:
@@ -39,7 +39,7 @@ class BacktrackingSolver(ConstraintSolver):
 
         return keys1 == keys2
 
-    def _inference(self, name: str):
+    def _inference(self, name: NameType):
         is_consistent = MAC(self.csp, name)
 
         if not is_consistent:
@@ -50,7 +50,7 @@ class BacktrackingSolver(ConstraintSolver):
 
         return inferences
 
-    def _create_parameters(self, assignment: Assignment, name: str, value: ValueType, names: List[str]):
+    def _create_parameters(self, assignment: Assignment, name: NameType, value: ValueType, names: List[NameType]):
         values = []
 
         for n in names:
@@ -82,9 +82,10 @@ class BacktrackingSolver(ConstraintSolver):
     def _get_ordered_domain_values(self, variable: Variable):
         domain = self.csp.domains[variable.name]
         # todo: perform value ordering
+        domain.values = shuffle(domain.values)
         return domain
 
-    def _is_k_consistent(self, assignment: Assignment, name: str, value: ValueType, k: int):
+    def _is_k_consistent(self, assignment: Assignment, name: NameType, value: ValueType, k: int):
         constraints = self.csp.get_related_constraints(name, k)
 
         for constraint, names in constraints:
@@ -95,7 +96,7 @@ class BacktrackingSolver(ConstraintSolver):
 
         return True
 
-    def _is_consistent(self, assignment: Assignment, name: str, value: ValueType):
+    def _is_consistent(self, assignment: Assignment, name: NameType, value: ValueType):
         return self._is_k_consistent(assignment, name, value, 2) and self._is_k_consistent(assignment, name, value, 0)
 
     def _backtrack(self, assignment):
@@ -149,7 +150,7 @@ class MinConflictsSolver(ConstraintSolver):
         super().__init__(csp)
         self._steps = steps
 
-    def _create_parameters(self, assignment: Assignment, names: List[str]):
+    def _create_parameters(self, assignment: Assignment, names: List[NameType]):
         values = []
 
         for n in names:
@@ -160,7 +161,7 @@ class MinConflictsSolver(ConstraintSolver):
 
         return values
 
-    def _value_with_min_conflicts(self, name: str, assignment: Assignment):
+    def _value_with_min_conflicts(self, name: NameType, assignment: Assignment):
         conflicts_count = {}
 
         for value in self.csp.domains[name].values:

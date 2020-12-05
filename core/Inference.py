@@ -1,3 +1,4 @@
+from core.Variable import NameType
 from .Constraint import Constraint
 from .CSP import CSP
 
@@ -5,7 +6,7 @@ from .CSP import CSP
 # Arc Consistency
 
 
-def revise(csp: CSP, constraint: Constraint, x_name: str, y_name: str) -> bool:
+def revise(csp: CSP, constraint: Constraint, x_name: NameType, y_name: NameType) -> bool:
     '''
     - Revise the domain of X wrt domain of Y
     - Makes X arc consistent wrt Y
@@ -44,6 +45,6 @@ def AC3(csp: CSP) -> bool:
     return arc_consistency(csp, binary_constraints)
 
 
-def MAC(csp: CSP, name: str) -> bool:
+def MAC(csp: CSP, name: NameType) -> bool:
     binary_constraints = csp.get_related_constraints(name, 2)
     return arc_consistency(csp, binary_constraints)
