@@ -1,6 +1,4 @@
-from core.Constraint import ValueCountEqualToConstraint, ValueCountUpperLimitConstraint
-from core.ConstraintSolver import BacktrackingSolver, MinConflictsSolver
-from core import CSP
+from core import *
 
 
 def main():
@@ -52,6 +50,10 @@ def main():
     solver = BacktrackingSolver(csp)
     solution = solver.solve()
     print(solution)
+
+    #solver = MinConflictsSolver(csp, 6000)
+    #solution, isValid = solver.solve()
+    #print(solution, isValid)
 
 
 if __name__ == '__main__':

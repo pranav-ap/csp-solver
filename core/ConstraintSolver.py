@@ -82,7 +82,7 @@ class BacktrackingSolver(ConstraintSolver):
     def _get_ordered_domain_values(self, variable: Variable):
         domain = self.csp.domains[variable.name]
         # todo: perform value ordering
-        domain.values = shuffle(domain.values)
+        shuffle(domain.values)
         return domain
 
     def _is_k_consistent(self, assignment: Assignment, name: NameType, value: ValueType, k: int):
@@ -150,6 +150,9 @@ class MinConflictsSolver(ConstraintSolver):
         super().__init__(csp)
         self._steps = steps
 
+    def _is_solution(self, conflicted_variables):
+        return all([value == 0 for value in conflicted_variables.values()])
+
     def _create_parameters(self, assignment: Assignment, names: List[NameType]):
         values = []
 
@@ -178,17 +181,12 @@ class MinConflictsSolver(ConstraintSolver):
         return min_value
 
     def _get_conflicted_variable(self, conflicted_variables):
-        names = list(conflicted_variables.keys())
-        shuffle(names)
+        conflicted_variables = {name: conflicts
+                                for name, conflicts in conflicted_variables.items() if conflicts > 0}
 
-        for name in names:
-            if conflicted_variables[name]:
-                return name
+        name = choice(list(conflicted_variables.keys()))
 
-        return None
-
-    def _is_solution(self, conflicted_variables):
-        return all([value == 0 for value in conflicted_variables.values()])
+        return name
 
     def _get_conflicted_variables(self, assignment: Assignment):
         conflicted_variables = {key: 0 for key in assignment.keys()}
@@ -202,9 +200,7 @@ class MinConflictsSolver(ConstraintSolver):
 
         return conflicted_variables
 
-    def _min_conflicts(self):
-        assignment = {}
-
+    def _min_conflicts(self, assignment):
         # Initial complete assignment
         for name, domain in self.csp.domains.items():
             assignment[name] = choice(domain.values)
@@ -224,10 +220,12 @@ class MinConflictsSolver(ConstraintSolver):
 
         return assignment, False
 
-    def solve(self) -> Assignment:
+    def solve(self, assignment=None) -> Assignment:
+        assignment = assignment or {}
+
         is_consistent = self._make_node_consistent()
 
         if not is_consistent:
-            return {}, False
+            return assignment, False
 
-        return self._min_conflicts()
+        return self._min_conflicts(assignment)

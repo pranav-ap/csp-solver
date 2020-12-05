@@ -1,7 +1,5 @@
-from core.Constraint import SomeDifferentConstraint, SomeEqualConstraint, SomeEqualToConstraint, SubsetEqualToConstraint
-from core import CSP, BacktrackingSolver, ExactSumConstraint, MinConflictsSolver, MaxSumConstraint
+from core import *
 import pytest
-from itertools import count
 
 
 def test_add_duplicate_variable():
@@ -20,19 +18,20 @@ def test_backtracking():
 
     csp.add_variable('a', [1, 2, 3])
     csp.add_variable('b', [1, 2, 3])
+    csp.add_variable('c', [1, 2, 3])
 
     # add constraints
 
     csp.add_constraint(lambda a, b: a < b, ['a', 'b'])
-    csp.add_constraint(ExactSumConstraint(5))
+    csp.add_constraint(lambda b, c: b < c, ['b', 'c'])
+    csp.add_constraint(MinSumConstraint(5))
 
     # Solve
 
     solver = BacktrackingSolver(csp)
     solution = solver.solve()
-    print(solution)
 
-    assert solution == {'a': 2, 'b': 3}
+    assert solution == {'a': 1, 'b': 2, 'c': 3}
 
 
 def test_min_conflicts():
@@ -42,50 +41,106 @@ def test_min_conflicts():
 
     csp.add_variable('a', [1, 2, 3])
     csp.add_variable('b', [1, 2, 3])
+    csp.add_variable('c', [1, 2, 3])
 
     # add constraints
 
     csp.add_constraint(lambda a, b: a < b, ['a', 'b'])
-    csp.add_constraint(ExactSumConstraint(5))
+    csp.add_constraint(lambda b, c: b < c, ['b', 'c'])
+    csp.add_constraint(MinSumConstraint(5))
 
     # Solve
 
-    solver = MinConflictsSolver(csp, 5000)
-    solution, valid = solver.solve()
-    print(solution)
+    solver = MinConflictsSolver(csp, 6000)
+    solution, isValid = solver.solve()
 
-    if valid:
-        assert solution == {'a': 2, 'b': 3}
+    #assert isValid
 
-    #assert valid
-    #assert solution == {'a': 2, 'b' : 3}
+    if isValid:
+        assert solution == {'a': 1, 'b': 2, 'c': 3}
 
 
-def test_n_queens():
+def test_n_rooks():
     csp = CSP()
-
     size = 3
 
     # add variables
 
-    for name in range(size * size):
-        csp.add_variables(name, [True, False])
+    names = list(range(size * size))
+    csp.add_variables(names, [True, False])
 
     # add constraints
 
+    csp.add_constraint(ValueCountEqualToConstraint(size, True))
+
+    # row constraints
+
     for row_start in range(0, size * size, size):
         row_names = list(range(row_start, row_start + size))
-        csp.add_constraint(SubsetEqualToConstraint(1, True), row_names)
+        csp.add_constraint(ValueCountUpperLimitConstraint(1, True), row_names)
+
+    # column constraints
 
     for col_start in range(0, size):
-        col_names = list(range(col_start, col_start + size, col_start * size))
-        csp.add_constraint(SubsetEqualToConstraint(1, True), col_names)
-
-    diagonal = list(range(size))
-    csp.add_constraint(SubsetEqualToConstraint(1, True), diagonal)
+        col_names = list(range(col_start, col_start + size * 3, size))
+        csp.add_constraint(ValueCountUpperLimitConstraint(1, True), col_names)
 
     # solve
 
-    solver = MinConflictsSolver(csp, 5000)
-    solution, valid = solver.solve()
+    solver = MinConflictsSolver(csp, 4000)
+    solution, isValid = solver.solve()
+    print(solution)
+
+    #assert isValid
+
+
+def test_n_queens():
+    csp = CSP()
+    size = 3
+
+    # add variables
+
+    names = list(range(size * size))
+    csp.add_variables(names, [True, False])
+
+    # add constraints
+
+    csp.add_constraint(ValueCountEqualToConstraint(size, True))
+
+    # row constraints
+
+    for row_start in range(0, size * size, size):
+        row_names = list(range(row_start, row_start + size))
+        csp.add_constraint(ValueCountUpperLimitConstraint(1, True), row_names)
+
+    # column constraints
+
+    for col_start in range(0, size):
+        col_names = list(range(col_start, col_start + size * 3, size))
+        csp.add_constraint(ValueCountUpperLimitConstraint(1, True), col_names)
+
+    # primary_diagonal
+
+    primary_diagonal = [index + index * size for index in range(size)]
+
+    csp.add_constraint(
+        ValueCountUpperLimitConstraint(1, True),
+        primary_diagonal)
+
+    # secondary_diagonal
+
+    secondary_diagonal = [row * size + col
+                          for row in range(size)
+                          for col in range(size)
+                          if row + col == size - 1]
+
+    csp.add_constraint(
+        ValueCountUpperLimitConstraint(1, True),
+        secondary_diagonal)
+
+    # solve
+
+    #solver = BacktrackingSolver(csp)
+    solver = MinConflictsSolver(csp, 4000)
+    solution, isValid = solver.solve()
     print(solution)
