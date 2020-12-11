@@ -1,9 +1,9 @@
 from typing import List, Union
+from random import choice, shuffle
 from .CSP import CSP
 from .Variable import ValueType, Variable, NameType
 from .Assignment import Assignment
 from .Inference import MAC
-from random import choice, shuffle
 
 
 class ConstraintSolver:
@@ -111,26 +111,18 @@ class BacktrackingSolver(ConstraintSolver):
 
             if self._is_consistent(assignment, name, value):
                 variable.value = value
-                assignment[name] = value
-
                 self.csp.save_domain_state()
 
                 inferences = self._inference(name)
 
                 if inferences or inferences == {}:
-                    assignment = {**assignment, **inferences}
-                    result = self._backtrack(assignment)
+                    result = self._backtrack(
+                        {**assignment, name: value, **inferences})
 
                     if result:
                         return result
 
-                # reset
-
                 self.csp.revert_domain_state()
-
-                del assignment[name]
-                for key, _ in inferences.items():
-                    assignment.pop(key, None)
 
         return False
 
@@ -151,7 +143,8 @@ class MinConflictsSolver(ConstraintSolver):
         self._steps = steps
 
     def _is_solution(self, conflicted_variables):
-        return all([value == 0 for value in conflicted_variables.values()])
+        result = all([value == 0 for value in conflicted_variables.values()])
+        return result
 
     def _create_parameters(self, assignment: Assignment, names: List[NameType]):
         values = []
@@ -180,15 +173,15 @@ class MinConflictsSolver(ConstraintSolver):
         min_value = min(conflicts_count, key=conflicts_count.get)
         return min_value
 
-    def _get_conflicted_variable(self, conflicted_variables):
-        conflicted_variables = {name: conflicts
-                                for name, conflicts in conflicted_variables.items() if conflicts > 0}
+    def _get_conflicted_variable(self, conflict_counts):
+        conflict_counts = {name: conflicts
+                           for name, conflicts in conflict_counts.items() if conflicts > 0}
 
-        name = choice(list(conflicted_variables.keys()))
+        name = choice(list(conflict_counts.keys()))
 
         return name
 
-    def _get_conflicted_variables(self, assignment: Assignment):
+    def _get_conflict_counts(self, assignment: Assignment):
         conflicted_variables = {key: 0 for key in assignment.keys()}
 
         for constraint, names in self.csp.constraints:
@@ -206,12 +199,12 @@ class MinConflictsSolver(ConstraintSolver):
             assignment[name] = choice(domain.values)
 
         for _ in range(self._steps):
-            conflicted_variables = self._get_conflicted_variables(assignment)
+            conflict_counts = self._get_conflict_counts(assignment)
 
-            if self._is_solution(conflicted_variables):
+            if self._is_solution(conflict_counts):
                 return assignment, True
 
-            name = self._get_conflicted_variable(conflicted_variables)
+            name = self._get_conflicted_variable(conflict_counts)
             value = self._value_with_min_conflicts(name, assignment)
 
             # set value

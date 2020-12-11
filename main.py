@@ -47,13 +47,13 @@ def main():
 
     # solve
 
-    solver = BacktrackingSolver(csp)
-    solution = solver.solve()
-    print(solution)
+    # solver = BacktrackingSolver(csp)
+    # solution = solver.solve()
+    # print(solution)
 
-    #solver = MinConflictsSolver(csp, 6000)
-    #solution, isValid = solver.solve()
-    #print(solution, isValid)
+    solver = MinConflictsSolver(csp, 100000)
+    solution, isValid = solver.solve()
+    print(solution, isValid)
 
 
 if __name__ == '__main__':

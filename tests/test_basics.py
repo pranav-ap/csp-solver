@@ -54,7 +54,7 @@ def test_min_conflicts():
     solver = MinConflictsSolver(csp, 6000)
     solution, isValid = solver.solve()
 
-    #assert isValid
+    # assert isValid
 
     if isValid:
         assert solution == {'a': 1, 'b': 2, 'c': 3}
@@ -91,7 +91,7 @@ def test_n_rooks():
     solution, isValid = solver.solve()
     print(solution)
 
-    #assert isValid
+    # assert isValid
 
 
 def test_n_queens():
@@ -140,7 +140,10 @@ def test_n_queens():
 
     # solve
 
-    #solver = BacktrackingSolver(csp)
-    solver = MinConflictsSolver(csp, 4000)
+    # solver = BacktrackingSolver(csp)
+    # solution = solver.solve()
+    # print(solution)
+
+    solver = MinConflictsSolver(csp, 10000)
     solution, isValid = solver.solve()
-    print(solution)
+    print(solution, isValid)
