@@ -1,50 +1,60 @@
-from core.Variable import NameType
-from .Constraint import Constraint
-from .CSP import CSP
-
-
 # Arc Consistency
 
 
-def revise(csp: CSP, constraint: Constraint, x_name: NameType, y_name: NameType) -> bool:
+def revise(csp, X, Y):
     '''
     - Revise the domain of X wrt domain of Y
     - Makes X arc consistent wrt Y
     '''
-    X = csp.domains[x_name]
-    Y = csp.domains[y_name]
+    X_domain = csp.curr_domains[X]
+    Y_domain = csp.curr_domains[Y]
 
-    revised_domain = [x for x in X for y in Y if constraint.is_satisfied(x, y)]
-    is_revised = len(X) == len(revised_domain)
+    revised = False
+    removals = []
 
-    if is_revised:
-        csp.domains[x_name].replace(revised_domain)
+    for X_value in X_domain:
+        conflict = True
 
-    return is_revised
+        for Y_value in Y_domain:
+            for constraint in csp.get_constraints_involving(X, {X, Y}):
+                if constraint.is_satisfied({X: X_value, Y: Y_value}):
+                    conflict = False
+                    break
+
+        if conflict:
+            removed = csp.prune(X, X_value)
+            removals.append(removed)
+            revised = True
+
+    return revised
 
 
-def arc_consistency(csp: CSP, binary_constraints) -> bool:
-    while binary_constraints:
-        constraint, [x, y] = binary_constraints.pop()
+def arc_consistency(csp, queue) -> bool:
+    csp.support_pruning()
+    sorted(queue, key=lambda XY: len(csp.curr_domains[XY[0]]), reverse=True)
 
-        if revise(csp, constraint, x, y):
+    while queue:
+        (X, Y) = queue.pop()
+
+        if revise(csp, X, Y):
             # no more values left in domain?
-            if not csp.domains[x]:
+            if not csp.curr_domains[X]:
                 return False
 
-            # add other related constraints
-            related_constraints = csp.get_related_constraints(x, 2)
-            filter(lambda cons, _: cons == constraint, related_constraints)
-            binary_constraints.extend(related_constraints)
+            other_neighbors = csp.neighbors[X].difference({Y})
+            queue.extend(other_neighbors)
 
     return True
 
 
-def AC3(csp: CSP) -> bool:
-    binary_constraints = csp.get_constraints(2)
-    return arc_consistency(csp, binary_constraints)
+def AC3(csp) -> bool:
+    queue = {(X, Y)
+             for X in csp.variables
+             for Y in csp.neighbors[X]}
+
+    return arc_consistency(csp, queue)
 
 
-def MAC(csp: CSP, name: NameType) -> bool:
-    binary_constraints = csp.get_related_constraints(name, 2)
-    return arc_consistency(csp, binary_constraints)
+def MAC(csp, name) -> bool:
+    queue = {(name, Y) for Y in csp.neighbors[name]}
+    return arc_consistency(csp, queue)

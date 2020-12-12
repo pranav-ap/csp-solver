@@ -7,51 +7,31 @@ def main():
 
     # add variables
 
-    names = list(range(size * size))
+    names = set(range(size * size))
     csp.add_variables(names, [True, False])
 
     # add constraints
 
-    csp.add_constraint(ValueCountEqualToConstraint(size, True))
+    csp.add_constraint(count_equal_to_constraint(size, True))
 
     # row constraints
 
     for row_start in range(0, size * size, size):
-        row_names = list(range(row_start, row_start + size))
-        csp.add_constraint(ValueCountUpperLimitConstraint(1, True), row_names)
+        row_names = set(range(row_start, row_start + size))
+        csp.add_constraint(
+            count_le_constraint(1, True), row_names)
 
     # column constraints
 
     for col_start in range(0, size):
-        col_names = list(range(col_start, col_start + size * 3, size))
-        csp.add_constraint(ValueCountUpperLimitConstraint(1, True), col_names)
-
-    # primary_diagonal
-
-    primary_diagonal = [index + index * size for index in range(size)]
-
-    csp.add_constraint(
-        ValueCountUpperLimitConstraint(1, True),
-        primary_diagonal)
-
-    # secondary_diagonal
-
-    secondary_diagonal = [row * size + col
-                          for row in range(size)
-                          for col in range(size)
-                          if row + col == size - 1]
-
-    csp.add_constraint(
-        ValueCountUpperLimitConstraint(1, True),
-        secondary_diagonal)
+        col_names = set(range(col_start, col_start + size * 3, size))
+        csp.add_constraint(
+            count_le_constraint(1, True), col_names)
 
     # solve
 
-    # solver = BacktrackingSolver(csp)
-    # solution = solver.solve()
-    # print(solution)
-
-    solver = MinConflictsSolver(csp, 100000)
+    solver = MinConflictsSolver(csp)
+    #solver = BacktrackingSolver(csp)
     solution, isValid = solver.solve()
     print(solution, isValid)
 

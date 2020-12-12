@@ -1,59 +1,93 @@
-from typing import Dict, List, Tuple
-from .Variable import ValueType, NameType, Variable
-from .Domain import Domain
-from .Constraint import Constraint, FunctionConstraint
+from .Constraint import Constraint
+from copy import deepcopy
 
 
 class CSP:
     def __init__(self) -> None:
-        self.variables: Dict[NameType, Variable] = {}
-        self.domains: Dict[NameType, Domain] = {}
-        self.constraints: List[Tuple[Constraint, List[str]]] = []
+        self.variables = set()  # just the names
+        self.domains = {}  # name -> (values)
+        self.constraints = []  # [Constraint]
 
-    def add_variable(self, name: NameType, domain: List[ValueType]):
+        self.neighbors = {}  # name -> set(names)
+        self.constraints_map = {}  # name -> set(Constraint)
+        self.curr_domains = None
+
+    def add_variable(self, name, domain):
         if name in self.variables:
             raise ValueError('${name} is already declared as a variable')
 
-        self.variables[name] = Variable(name)
-        self.domains[name] = Domain(domain)
+        self.variables.add(name)
+        self.domains[name] = domain or []
+        self.neighbors[name] = set()
+        self.constraints_map[name] = set()
 
-    def add_variables(self, names: List[NameType], domain: List[ValueType]):
+    def add_variables(self, names, domain):
         for name in names:
             self.add_variable(name, domain)
 
-    def add_constraint(self, constraint, names=None):
-        if callable(constraint):
-            constraint = FunctionConstraint(constraint)
-        elif not names:
-            names = list(self.variables.keys())
+    def add_constraint(self, constraint, scope=None):
+        scope = scope or self.variables
+        constraint = Constraint(scope, constraint)
 
-        self.constraints.append((constraint, names))
+        self.constraints.append(constraint)
 
-    # domains
+        # update constraint_map
 
-    def revert_domain_state(self):
-        for domain in self.domains.values():
-            domain.revert_state()
+        for name in scope:
+            self.constraints_map[name].add(constraint)
 
-    def save_domain_state(self):
-        for domain in self.domains.values():
-            domain.save_state()
+        # update neighbors
 
-    # constraints
+        neighbors = {name: scope.difference({name}) for name in scope}
 
-    def get_constraints(self, k: int):
-        constraints = [(constraint, names)
-                       for constraint, names in self.constraints
-                       if len(names) == k]
+        for name, scope in neighbors.items():
+            self.neighbors[name].update(scope)
+
+    def is_consistent(self, assignment):
+        return all(constraint.is_satisfied(assignment)
+                   for constraint in self.constraints
+                   if all(name in assignment for name in constraint.scope))
+
+    def is_complete(self, assignment):
+        keys = set(assignment.keys())
+        return keys == self.variables
+
+    def get_constraints_involving(self, name, scope):
+        constraints = [constraint
+                       for constraint in self.constraints_map[name]
+                       if constraint.scope == scope]
 
         return constraints
 
-    def get_related_constraints(self, name: NameType, k: int):
-        constraints = []
+    # Domain
 
-        if k == 0:
-            k = len(self.variables)
+    def support_pruning(self):
+        if self.curr_domains is None:
+            self.curr_domains = deepcopy(self.domains)
 
-        constraints = self.get_constraints(k)
-        filter(lambda _, scope: name in scope, constraints)
-        return constraints
+    def prune(self, var, value):
+        self.curr_domains[var].remove(value)
+        return (var, value)
+
+    def restore(self, removals):
+        for name, value in removals:
+            self.curr_domains[name].add(value)
+
+    def choices(self, name):
+        return (self.curr_domains or self.domains)[name]
+
+    def suppose(self, name, value):
+        self.support_pruning()
+        removals = [(name, val)
+                    for val in self.curr_domains[name] if val != value]
+        self.curr_domains[name] = {value}
+        return removals
+
+    # Assignment
+
+    def assign(self, var, val, assignment):
+        assignment[var] = val
+
+    def unassign(self, var, assignment):
+        if var in assignment:
+            del assignment[var]

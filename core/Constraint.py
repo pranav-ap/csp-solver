@@ -1,100 +1,106 @@
-from core.Variable import ValueType
-
-
 class Constraint:
-    def is_satisfied(self, *scope) -> bool:
-        pass
+    def __init__(self, scope, condition):
+        self.scope = scope
+        self.condition = condition
 
+    def _get_params(self, assignment):
+        return [assignment[name] for name in self.scope]
 
-class FunctionConstraint(Constraint):
-    def __init__(self, func):
-        self._func = func
-
-    def is_satisfied(self, *scope) -> bool:
-        return self._func(*scope)
+    def is_satisfied(self, assignment):
+        params = self._get_params(assignment)
+        return self.condition(*params)
 
 
 # Equality
 
 
-class AllDifferentConstraint(Constraint):
-    def is_satisfied(self, *scope) -> bool:
-        list_len = len(list(scope))
-        set_len = len(set(scope))
+def all_different_constraint():
+    def constraint(*params):
+        list_len = len(params)
+        set_len = len(set(params))
 
         return list_len == set_len
 
+    return constraint
 
-class AllEqualConstraint(Constraint):
-    def is_satisfied(self, *scope) -> bool:
-        set_len = len(set(scope))
+
+def all_equal_constraint():
+    def constraint(*params):
+        set_len = len(set(params))
         return set_len == 1
 
+    return constraint
 
-class AllEqualToConstraint(Constraint):
-    def __init__(self, value: ValueType) -> None:
-        self.value = value
 
-    def is_satisfied(self, *scope) -> bool:
-        length = scope.count(self.value)
-        return length == len(scope)
+def all_equal_to_constraint(value):
+    def constraint(*params):
+        return all(params, lambda p: p == value)
+
+    return constraint
 
 
 # Value Count
 
 
-class ValueCountEqualToConstraint(Constraint):
-    def __init__(self, limit: int, value: ValueType) -> None:
-        self.limit = limit
-        self.value = value
+def count_equal_to_constraint(limit, value):
+    def constraint(*params):
+        length = params.count(value)
+        return length == limit
 
-    def is_satisfied(self, *scope) -> bool:
-        length = scope.count(self.value)
-        return length == self.limit
+    return constraint
 
 
-class ValueCountUpperLimitConstraint(Constraint):
-    def __init__(self, upper_limit: int, value: ValueType) -> None:
-        self.upper_limit = upper_limit
-        self.value = value
+def count_greater_than_constraint(limit, value):
+    def constraint(*params):
+        length = params.count(value)
+        return length > limit
 
-    def is_satisfied(self, *scope) -> bool:
-        length = scope.count(self.value)
-        return length <= self.upper_limit
+    return constraint
 
 
-class ValueCountLowerLimitConstraint(Constraint):
-    def __init__(self, lower_limit: int, value: ValueType) -> None:
-        self.lower_limit = lower_limit
-        self.value = value
+def count_less_than_constraint(limit, value):
+    def constraint(*params):
+        length = params.count(value)
+        return length < limit
 
-    def is_satisfied(self, *scope) -> bool:
-        length = scope.count(self.value)
-        return length >= self.lower_limit
+    return constraint
+
+
+def count_ge_constraint(limit, value):
+    def constraint(*params):
+        length = params.count(value)
+        return length >= limit
+
+    return constraint
+
+
+def count_le_constraint(limit, value):
+    def constraint(*params):
+        length = params.count(value)
+        return length <= limit
+
+    return constraint
 
 
 # Sum
 
 
-class MaxSumConstraint(Constraint):
-    def __init__(self, max_sum: int) -> None:
-        self.max_sum = max_sum
+def max_sum_constraint(max_sum):
+    def constraint(*params):
+        return sum(list(params)) <= max_sum
 
-    def is_satisfied(self, *scope) -> bool:
-        return sum(list(scope)) <= self.max_sum
-
-
-class MinSumConstraint(Constraint):
-    def __init__(self, min_sum: int) -> None:
-        self.min_sum = min_sum
-
-    def is_satisfied(self, *scope) -> bool:
-        return sum(list(scope)) >= self.min_sum
+    return constraint
 
 
-class ExactSumConstraint(Constraint):
-    def __init__(self, exact_sum: int) -> None:
-        self.exact_sum = exact_sum
+def max_sum_constraint(min_sum):
+    def constraint(*params):
+        return sum(list(params)) >= min_sum
 
-    def is_satisfied(self, *scope) -> bool:
-        return sum(list(scope)) == self.exact_sum
+    return constraint
+
+
+def exact_sum_constraint(exact_sum):
+    def constraint(*params):
+        return sum(list(params)) == exact_sum
+
+    return constraint
