@@ -1,5 +1,4 @@
 from .Constraint import Constraint
-from copy import deepcopy
 
 
 class CSP:
@@ -10,14 +9,13 @@ class CSP:
 
         self.neighbors = {}  # name -> set(names)
         self.constraints_map = {}  # name -> set(Constraint)
-        self.curr_domains = None
 
-    def add_variable(self, name, domain):
+    def add_variable(self, name, domain):  # domain is a set
         if name in self.variables:
             raise ValueError('${name} is already declared as a variable')
 
         self.variables.add(name)
-        self.domains[name] = domain or []
+        self.domains[name] = domain or set()
         self.neighbors[name] = set()
         self.constraints_map[name] = set()
 
@@ -25,28 +23,20 @@ class CSP:
         for name in names:
             self.add_variable(name, domain)
 
-    def add_constraint(self, constraint, scope=None):
-        scope = scope or self.variables
-        constraint = Constraint(scope, constraint)
+    def add_constraint(self, constraint, params=None):  # scope is a list
+        params = params or list(self.variables)
+        scope = set(params)
+
+        constraint = Constraint(constraint, scope, params)
 
         self.constraints.append(constraint)
-
-        # update constraint_map
 
         for name in scope:
             self.constraints_map[name].add(constraint)
 
-        # update neighbors
-
-        neighbors = {name: scope.difference({name}) for name in scope}
-
-        for name, scope in neighbors.items():
-            self.neighbors[name].update(scope)
-
-    def is_consistent(self, assignment):
-        return all(constraint.is_satisfied(assignment)
-                   for constraint in self.constraints
-                   if all(name in assignment for name in constraint.scope))
+        for name in scope:
+            other_neighbors = scope.difference({name})
+            self.neighbors[name].update(other_neighbors)
 
     def is_complete(self, assignment):
         keys = set(assignment.keys())
@@ -61,26 +51,13 @@ class CSP:
 
     # Domain
 
-    def support_pruning(self):
-        if self.curr_domains is None:
-            self.curr_domains = deepcopy(self.domains)
-
-    def prune(self, var, value):
-        self.curr_domains[var].remove(value)
-        return (var, value)
-
     def restore(self, removals):
         for name, value in removals:
-            self.curr_domains[name].add(value)
-
-    def choices(self, name):
-        return (self.curr_domains or self.domains)[name]
+            self.domains[name].add(value)
 
     def suppose(self, name, value):
-        self.support_pruning()
-        removals = [(name, val)
-                    for val in self.curr_domains[name] if val != value]
-        self.curr_domains[name] = {value}
+        removals = [(name, val) for val in self.domains[name] if val != value]
+        self.domains[name] = {value}
         return removals
 
     # Assignment

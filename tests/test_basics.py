@@ -1,4 +1,5 @@
 from core import *
+import numpy as np
 import pytest
 
 
@@ -62,88 +63,85 @@ def test_min_conflicts():
 
 def test_n_rooks():
     csp = CSP()
-    size = 3
+    size = 5
 
     # add variables
 
-    names = list(range(size * size))
+    names = set(range(size * size))
     csp.add_variables(names, [True, False])
 
     # add constraints
 
-    csp.add_constraint(ValueCountEqualToConstraint(size, True))
+    csp.add_constraint(count_equal_to_constraint(size, True))
 
     # row constraints
 
     for row_start in range(0, size * size, size):
-        row_names = list(range(row_start, row_start + size))
-        csp.add_constraint(ValueCountUpperLimitConstraint(1, True), row_names)
+        row_names = set(range(row_start, row_start + size))
+        csp.add_constraint(
+            count_le_constraint(1, True), row_names)
 
     # column constraints
 
     for col_start in range(0, size):
-        col_names = list(range(col_start, col_start + size * 3, size))
-        csp.add_constraint(ValueCountUpperLimitConstraint(1, True), col_names)
+        col_names = set(range(col_start, size * size, size))
+        csp.add_constraint(
+            count_le_constraint(1, True), col_names)
 
     # solve
 
-    solver = MinConflictsSolver(csp, 4000)
+    #solver = MinConflictsSolver(csp)
+    solver = BacktrackingSolver(csp)
     solution, isValid = solver.solve()
-    print(solution)
-
-    # assert isValid
+    assert isValid
 
 
 def test_n_queens():
     csp = CSP()
-    size = 3
+
+    size = 5
+    board = np.arange(size * size).reshape(size, size)
 
     # add variables
 
-    names = list(range(size * size))
+    names = set(range(size * size))
     csp.add_variables(names, [True, False])
 
     # add constraints
 
-    csp.add_constraint(ValueCountEqualToConstraint(size, True))
+    csp.add_constraint(count_equal_to_constraint(size, True))
 
     # row constraints
 
-    for row_start in range(0, size * size, size):
-        row_names = list(range(row_start, row_start + size))
-        csp.add_constraint(ValueCountUpperLimitConstraint(1, True), row_names)
+    for row in board:
+        csp.add_constraint(count_le_constraint(1, True), row)
 
     # column constraints
 
-    for col_start in range(0, size):
-        col_names = list(range(col_start, col_start + size * 3, size))
-        csp.add_constraint(ValueCountUpperLimitConstraint(1, True), col_names)
+    for column in board.transpose():
+        csp.add_constraint(count_le_constraint(1, True), column)
 
-    # primary_diagonal
+    # diagonal constraints
 
-    primary_diagonal = [index + index * size for index in range(size)]
+    diagonals = []
 
-    csp.add_constraint(
-        ValueCountUpperLimitConstraint(1, True),
-        primary_diagonal)
+    diagonals.extend(board[::-1, :].diagonal(i)
+                     for i in range(-board.shape[0] + 1, board.shape[1]))
 
-    # secondary_diagonal
+    diagonals.extend(board.diagonal(i)
+                     for i in range(board.shape[1] - 1, -board.shape[0], -1))
 
-    secondary_diagonal = [row * size + col
-                          for row in range(size)
-                          for col in range(size)
-                          if row + col == size - 1]
-
-    csp.add_constraint(
-        ValueCountUpperLimitConstraint(1, True),
-        secondary_diagonal)
+    for diagonal in diagonals:
+        csp.add_constraint(count_le_constraint(1, True), diagonal)
 
     # solve
 
-    # solver = BacktrackingSolver(csp)
-    # solution = solver.solve()
-    # print(solution)
-
-    solver = MinConflictsSolver(csp, 10000)
+    solver = MinConflictsSolver(csp)
+    #solver = BacktrackingSolver(csp)
     solution, isValid = solver.solve()
     print(solution, isValid)
+    print('-----')
+
+    for key, value in solution.items():
+        if value:
+            print(key)

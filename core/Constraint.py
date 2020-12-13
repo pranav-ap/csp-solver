@@ -1,10 +1,11 @@
 class Constraint:
-    def __init__(self, scope, condition):
-        self.scope = scope
+    def __init__(self, condition, scope, parameters):
         self.condition = condition
+        self.scope = scope  # set
+        self.parameters = parameters  # list
 
     def _get_params(self, assignment):
-        return [assignment[name] for name in self.scope]
+        return [assignment[name] for name in self.parameters]
 
     def is_satisfied(self, assignment):
         params = self._get_params(assignment)
@@ -39,7 +40,7 @@ def all_equal_to_constraint(value):
     return constraint
 
 
-# Value Count
+# Count
 
 
 def count_equal_to_constraint(limit, value):
@@ -92,7 +93,7 @@ def max_sum_constraint(max_sum):
     return constraint
 
 
-def max_sum_constraint(min_sum):
+def min_sum_constraint(min_sum):
     def constraint(*params):
         return sum(list(params)) >= min_sum
 
