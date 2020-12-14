@@ -54,6 +54,24 @@ def arc_consistency(csp, queue) -> bool:
     return True
 
 
+def forward_checking(csp, X, assignment):
+    removals = []
+
+    # for Y in csp.neighbors[X].difference(assignment.keys()):
+    #     binary_constraints = csp.get_constraints_involving(X, {X, Y})
+
+    #     for constraint in binary_constraints:
+    #         for Y_value in csp.domains[Y]:
+    #             assignment = {**assignment, Y: Y_value}
+
+    #             if not constraint.is_satisfied(assignment):
+    #                 removals.append((Y, Y_value))
+
+    # satisfied = len(removals) == 0
+
+    return removals
+
+
 def AC3(csp) -> bool:
     queue = {(X, Y)
              for X in csp.variables
