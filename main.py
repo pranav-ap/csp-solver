@@ -19,10 +19,13 @@ def main():
 
     # Solve
 
-    #solver = MinConflictsSolver(csp)
-    solver = BacktrackingSolver(csp)
-    solution, isValid = solver.solve()
-    print(solution, isValid)
+    converter = DualGraphMaker(csp)
+    csp = converter.convert()
+
+    # solver = MinConflictsSolver(csp)
+    # solver = BacktrackingSolver(csp)
+    # solution, isValid = solver.solve()
+    # print(solution, isValid)
 
 
 if __name__ == '__main__':
