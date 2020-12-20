@@ -1,7 +1,6 @@
 class Constraint:
-    def __init__(self, condition, scope, parameters):
+    def __init__(self, condition, parameters):
         self.condition = condition
-        self.scope = scope  # set
         self.parameters = parameters  # list
 
     def _get_params(self, assignment):
@@ -10,6 +9,9 @@ class Constraint:
     def is_satisfied(self, assignment):
         params = self._get_params(assignment)
         return self.condition(*params)
+
+    def is_pleased(self, input):
+        return self.condition(*input)
 
 
 # Equality
@@ -88,20 +90,20 @@ def count_le_constraint(limit, value):
 
 def max_sum_constraint(max_sum):
     def constraint(*params):
-        return sum(list(params)) <= max_sum
+        return sum(params) <= max_sum
 
     return constraint
 
 
 def min_sum_constraint(min_sum):
     def constraint(*params):
-        return sum(list(params)) >= min_sum
+        return sum(params) >= min_sum
 
     return constraint
 
 
 def exact_sum_constraint(exact_sum):
     def constraint(*params):
-        return sum(list(params)) == exact_sum
+        return sum(params) == exact_sum
 
     return constraint

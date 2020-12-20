@@ -3,7 +3,7 @@ import numpy as np
 
 
 def main():
-    csp = CSP()
+    csp = NaryCSP()
 
     # add variables
 
@@ -15,12 +15,13 @@ def main():
 
     csp.add_constraint(lambda a, b: a < b, ['a', 'b'])
     csp.add_constraint(lambda b, c: b < c, ['b', 'c'])
-    csp.add_constraint(min_sum_constraint(5))
+    # csp.add_constraint(min_sum_constraint(5))
 
     # Solve
 
-    converter = DualGraphMaker(csp)
+    converter = DualCSPBuilder(csp)
     csp = converter.convert()
+    print(csp)
 
     # solver = MinConflictsSolver(csp)
     # solver = BacktrackingSolver(csp)

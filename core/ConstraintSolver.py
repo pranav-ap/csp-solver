@@ -1,12 +1,11 @@
 from random import choice, shuffle
 from copy import deepcopy
-from collections import OrderedDict
-from .CSP import CSP
+from .CSP import DualCSP
 from .Inference import MAC
 
 
 class ConstraintSolver:
-    def __init__(self, csp: CSP) -> None:
+    def __init__(self, csp: DualCSP) -> None:
         self.csp = csp
 
     def _make_node_consistent(self):
@@ -33,7 +32,7 @@ class ConstraintSolver:
 
 
 class MinConflictsSolver(ConstraintSolver):
-    def __init__(self, csp: CSP, max_steps=100000) -> None:
+    def __init__(self, csp: DualCSP, max_steps=100000) -> None:
         super().__init__(csp)
         self._max_steps = max_steps
 
@@ -89,7 +88,7 @@ class MinConflictsSolver(ConstraintSolver):
 
 
 class BacktrackingSolver(ConstraintSolver):
-    def __init__(self, csp: CSP) -> None:
+    def __init__(self, csp: DualCSP) -> None:
         super().__init__(csp)
 
     def _nconflicts(self, name, value, assignment):
