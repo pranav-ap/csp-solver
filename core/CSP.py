@@ -1,5 +1,6 @@
 from .Constraint import Constraint
 from itertools import product
+from collections import defaultdict, namedtuple
 
 
 class NaryCSP:
@@ -31,12 +32,14 @@ class NaryCSP:
 
 class DualCSP:
     def __init__(self):
+        self.originals = set()  # just the names
+
         self.variables = set()  # just the names
         self.parameters = {}  # name => [names]
-        self.domains = {}  # name => set(tuples)
+        self.domains = {}  # name => { tuples }
 
-        # (name 1, name 2) => set(common parameters)
-        self.neighbors = {}
+        self.overlaps = {}
+        self.neighbors = defaultdict(set)
 
     def add_variable(self, name, domain):  # domain is a set
         self.variables.add(name)
@@ -45,9 +48,59 @@ class DualCSP:
     def set_parameters(self, name, parameters):
         self.parameters[name] = parameters
 
-    def set_edge(self, v1, v2, scope_common):
-        v1, v2 = (v1, v2) if v1 < v2 else (v2, v1)
-        self.neighbors[(v1, v2)] = scope_common
+    def add_neighbor(self, n1, n2):
+        self.neighbors[n1].add(n2)
+        self.neighbors[n2].add(n1)
+
+    def set_overlap(self, name1, name2, scope_common):
+        name1, name2 = (name1, name2) if name1 < name2 else (name2, name1)
+        self.overlaps[(name1, name2)] = scope_common
+
+    def get_edges(self, of=None):
+        if of is not None:
+            edges = {(of, Y) for Y in self.neighbors[of]}
+            return edges
+
+        all_edges = list(self.overlaps.keys())
+        return all_edges
+
+    def get_overlap(self, name1, name2):
+        name1, name2 = (name1, name2) if name1 < name2 else (name2, name1)
+        return self.overlaps[(name1, name2)]
+
+    def overlap_equality(self, tuple_n1, tuple_n2, common_names):
+        for name in common_names:
+            element_n1 = getattr(tuple_n1, name)
+            element_n2 = getattr(tuple_n2, name)
+
+            if element_n1 != element_n2:
+                return False
+
+        return True
+
+    def restore(self, removals):
+        for name, tuple_value in removals:
+            self.domains[name].add(tuple_value)
+
+    # Assignment
+
+    def assign(self, name, value, assignment):
+        assignment[name] = value
+
+    def unassign(self, name, assignment):
+        if name in assignment:
+            del assignment[name]
+
+    def twin_assignment(self, assignment):
+        twin = {}
+
+        for name in self.originals:
+            for tuple_value in assignment.values():
+                if hasattr(tuple_value, name):
+                    twin[name] = getattr(tuple_value, name)
+                    break
+
+        return twin
 
 
 class DualCSPBuilder:
@@ -65,6 +118,8 @@ class DualCSPBuilder:
         return dual_name
 
     def _create_dual_domain(self, constraint):
+        named_tuple = namedtuple('domain', constraint.parameters)
+
         domain = product(*[self.csp.domains[name]
                            for name in constraint.parameters])
 
@@ -72,29 +127,33 @@ class DualCSPBuilder:
 
         for tuple_value in domain:
             if constraint.is_pleased(tuple_value):
-                filtered_domain.add(tuple_value)
+                filtered_domain.add(named_tuple(*tuple_value))
 
         return filtered_domain
 
     def _calculate_neighbors(self):
-        for v1, v2 in product(self.dual_csp.variables, self.dual_csp.variables):
-            if v1 == v2:
+        for n1, n2 in product(self.dual_csp.variables, self.dual_csp.variables):
+            if n1 == n2:
                 continue
 
-            scope_v1 = set(self.dual_csp.parameters[v1])
-            scope_v2 = set(self.dual_csp.parameters[v2])
-            scope_common = scope_v1.intersection(scope_v2)
+            scope_n1 = set(self.dual_csp.parameters[n1])
+            scope_n2 = set(self.dual_csp.parameters[n2])
+            scope_common = scope_n1.intersection(scope_n2)
 
             if len(scope_common):
-                self.dual_csp.set_edge(v1, v2, scope_common)
+                self.dual_csp.add_neighbor(n1, n2)
+                self.dual_csp.set_overlap(n1, n2, scope_common)
 
-    def convert(self) -> DualCSP:
+    def _calculate_variables(self):
+        self.dual_csp.originals = self.csp.variables
+
         for constraint in self.csp.constraints:
             dual_name = self._create_dual_name()
             domain = self._create_dual_domain(constraint)
             self.dual_csp.add_variable(dual_name, domain)
             self.dual_csp.set_parameters(dual_name, constraint.parameters)
 
+    def convert(self) -> DualCSP:
+        self._calculate_variables()
         self._calculate_neighbors()
-
         return self.dual_csp

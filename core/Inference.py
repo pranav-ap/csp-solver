@@ -10,21 +10,17 @@ def revise(csp, X, Y):
     Y_domain = csp.domains[Y]
     removals = []
 
-    binary_constraints = csp.get_constraints_involving(X, {X, Y})
+    for X_tuple_value in X_domain:
+        satisfied = False
+        overlap = csp.get_overlap(X, Y)
 
-    for constraint in binary_constraints:
-        for X_value in X_domain:
-            satisfied = False
+        for Y_tuple_value in Y_domain:
+            if csp.overlap_equality(X_tuple_value, Y_tuple_value, overlap):
+                satisfied = True
+                break
 
-            for Y_value in Y_domain:
-                assignment = {X: X_value, Y: Y_value}
-
-                if constraint.is_satisfied(assignment):
-                    satisfied = True
-                    break
-
-            if not satisfied:
-                removals.append((X, X_value))
+        if not satisfied:
+            removals.append((X, X_tuple_value))
 
     is_revised = len(removals) > 0
 
@@ -39,7 +35,6 @@ def arc_consistency(csp, queue) -> bool:
 
     while queue:
         (X, Y) = queue.pop()
-
         removals, revised = revise(csp, X, Y)
 
         if revised:
@@ -55,13 +50,10 @@ def arc_consistency(csp, queue) -> bool:
 
 
 def AC3(csp) -> bool:
-    queue = {(X, Y)
-             for X in csp.variables
-             for Y in csp.neighbors[X]}
-
+    queue = csp.get_edges()
     return arc_consistency(csp, queue)
 
 
 def MAC(csp, name) -> bool:
-    queue = {(name, Y) for Y in csp.neighbors[name]}
+    queue = csp.get_edges(of=name)
     return arc_consistency(csp, queue)
