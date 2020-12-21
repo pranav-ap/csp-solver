@@ -22,10 +22,10 @@ def main():
     converter = DualCSPBuilder(csp)
     csp = converter.convert()
 
-    # solver = BacktrackingSolver(csp)
-    solver = MinConflictsSolver(csp)
-    solution, isValid = solver.solve()
-    print(solution, isValid)
+    solver = BacktrackingSolver(csp)
+    # solver = MinConflictsSolver(csp)
+    solution, is_valid = solver.solve()
+    print(solution, is_valid)
 
 
 if __name__ == '__main__':

@@ -58,7 +58,7 @@ class DualCSP:
 
     def get_edges(self, of=None):
         if of is not None:
-            edges = {(of, Y) for Y in self.neighbors[of]}
+            edges = [(of, Y) for Y in self.neighbors[of]]
             return edges
 
         all_edges = list(self.overlaps.keys())
@@ -78,9 +78,16 @@ class DualCSP:
 
         return True
 
+    # Domain
+
     def restore(self, removals):
         for name, tuple_value in removals:
             self.domains[name].add(tuple_value)
+
+    def suppose(self, name, value):
+        removals = [(name, val) for val in self.domains[name] if val != value]
+        self.domains[name] = {value}
+        return removals
 
     # Assignment
 
@@ -101,6 +108,10 @@ class DualCSP:
                     break
 
         return twin
+
+    def is_complete(self, assignment):
+        keys = set(assignment.keys())
+        return keys == self.variables
 
 
 class DualCSPBuilder:

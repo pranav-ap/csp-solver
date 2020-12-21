@@ -8,11 +8,12 @@ def revise(csp, X, Y):
     '''
     X_domain = csp.domains[X]
     Y_domain = csp.domains[Y]
+
+    overlap = csp.get_overlap(X, Y)
     removals = []
 
     for X_tuple_value in X_domain:
         satisfied = False
-        overlap = csp.get_overlap(X, Y)
 
         for Y_tuple_value in Y_domain:
             if csp.overlap_equality(X_tuple_value, Y_tuple_value, overlap):
@@ -31,7 +32,7 @@ def revise(csp, X, Y):
 
 
 def arc_consistency(csp, queue) -> bool:
-    sorted(queue, key=lambda XY: len(csp.domains[XY[0]]), reverse=True)
+    queue = sorted(queue, key=lambda XY: len(csp.domains[XY[0]]), reverse=True)
 
     while queue:
         (X, Y) = queue.pop()
@@ -44,7 +45,8 @@ def arc_consistency(csp, queue) -> bool:
                 return False
 
             other_neighbors = csp.neighbors[X].difference({Y})
-            queue.update({(Z, X) for Z in other_neighbors})
+            arcs = {(Z, X) for Z in other_neighbors if (Z, X) not in queue}
+            queue.extend(arcs)
 
     return True
 
