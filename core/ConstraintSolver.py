@@ -1,11 +1,13 @@
 from copy import deepcopy
 from random import choice, shuffle
-from .CSP import DualCSP
+from .CSP import DualCSPBuilder
 from .Inference import MAC
 
 
 class ConstraintSolver:
-    def __init__(self, csp: DualCSP):
+    def __init__(self, csp):
+        converter = DualCSPBuilder(csp)
+        csp = converter.convert()
         self.csp = csp
 
     def _nconflicts(self, name, value, assignment):
@@ -31,7 +33,7 @@ class ConstraintSolver:
 
 
 class MinConflictsSolver(ConstraintSolver):
-    def __init__(self, csp: DualCSP, max_steps=100000):
+    def __init__(self, csp, max_steps=100000):
         super().__init__(csp)
         self._max_steps = max_steps
 
@@ -77,9 +79,9 @@ class MinConflictsSolver(ConstraintSolver):
 
 
 class BacktrackingSolver(ConstraintSolver):
-    def __init__(self, csp: DualCSP):
+    def __init__(self, csp):
         super().__init__(csp)
-        self.unassigned_variables = deepcopy(csp.variables)
+        self.unassigned_variables = deepcopy(self.csp.variables)
 
     def _select_unassigned_variable(self):
         unassigned_variables = list(self.unassigned_variables)

@@ -4,26 +4,35 @@ import numpy as np
 
 def main():
     csp = NaryCSP()
+    size = 4
 
     # add variables
 
-    csp.add_variable('a', {1, 2, 3})
-    csp.add_variable('b', {1, 2, 3})
-    csp.add_variable('c', {1, 2, 3})
+    names = set(range(size * size))
+    csp.add_variables(names, [True, False])
 
     # add constraints
 
-    csp.add_constraint(lambda a, b: a < b, ['a', 'b'])
-    csp.add_constraint(lambda b, c: b < c, ['b', 'c'])
-    csp.add_constraint(min_sum_constraint(5))
+    csp.add_constraint(count_equal_to_constraint(size, True))
 
-    # Solve
+    # row constraints
 
-    converter = DualCSPBuilder(csp)
-    csp = converter.convert()
+    for row_start in range(0, size * size, size):
+        row_names = set(range(row_start, row_start + size))
+        csp.add_constraint(
+            count_le_constraint(1, True), row_names)
 
+    # column constraints
+
+    for col_start in range(0, size):
+        col_names = set(range(col_start, size * size, size))
+        csp.add_constraint(
+            count_le_constraint(1, True), col_names)
+
+    # solve
+
+    #solver = MinConflictsSolver(csp)
     solver = BacktrackingSolver(csp)
-    # solver = MinConflictsSolver(csp)
     solution, is_valid = solver.solve()
     print(solution, is_valid)
 

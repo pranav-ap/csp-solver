@@ -52,10 +52,6 @@ class DualCSP:
         self.neighbors[n1].add(n2)
         self.neighbors[n2].add(n1)
 
-    def set_overlap(self, name1, name2, scope_common):
-        name1, name2 = (name1, name2) if name1 < name2 else (name2, name1)
-        self.overlaps[(name1, name2)] = scope_common
-
     def get_edges(self, of=None):
         if of is not None:
             edges = [(of, Y) for Y in self.neighbors[of]]
@@ -64,12 +60,19 @@ class DualCSP:
         all_edges = list(self.overlaps.keys())
         return all_edges
 
+    # overlap
+
+    def set_overlap(self, name1, name2, scope_common):
+        name1, name2 = (name1, name2) if name1 < name2 else (name2, name1)
+        self.overlaps[(name1, name2)] = scope_common
+
     def get_overlap(self, name1, name2):
         name1, name2 = (name1, name2) if name1 < name2 else (name2, name1)
         return self.overlaps[(name1, name2)]
 
     def overlap_equality(self, tuple_n1, tuple_n2, common_names):
         for name in common_names:
+            name = 'attr_' + str(name)
             element_n1 = getattr(tuple_n1, name)
             element_n2 = getattr(tuple_n2, name)
 
@@ -102,9 +105,10 @@ class DualCSP:
         twin = {}
 
         for name in self.originals:
+            name_attr = 'attr_' + str(name)
             for tuple_value in assignment.values():
-                if hasattr(tuple_value, name):
-                    twin[name] = getattr(tuple_value, name)
+                if hasattr(tuple_value, name_attr):
+                    twin[name] = getattr(tuple_value, name_attr)
                     break
 
         return twin
@@ -129,7 +133,8 @@ class DualCSPBuilder:
         return dual_name
 
     def _create_dual_domain(self, constraint):
-        named_tuple = namedtuple('domain', constraint.parameters)
+        str_params = ['attr_' + str(p) for p in constraint.parameters]
+        named_tuple = namedtuple('domain', str_params)
 
         domain = product(*[self.csp.domains[name]
                            for name in constraint.parameters])
