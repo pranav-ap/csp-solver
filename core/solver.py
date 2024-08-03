@@ -1,16 +1,20 @@
 from copy import deepcopy
 from random import choice, shuffle
-from .CSP import DualCSPBuilder
-from .Inference import MAC
+from core.problem import DualCSPBuilder
+from core.inference import MAC
+from core.constraints import no_constraints
 
 
-class ConstraintSolver:
+class Solver:
     def __init__(self, csp):
+        if len(csp.constraints) == 0:
+            csp.add_constraint(no_constraints())
+
         converter = DualCSPBuilder(csp)
         csp = converter.convert()
         self.csp = csp
 
-    def _nconflicts(self, name, value, assignment):
+    def _conflicts_count(self, name, value, assignment):
         suppose = deepcopy(assignment)
         suppose[name] = value
 
@@ -32,7 +36,7 @@ class ConstraintSolver:
         raise NotImplementedError()
 
 
-class MinConflictsSolver(ConstraintSolver):
+class MinConflictsSolver(Solver):
     def __init__(self, csp, max_steps=100000):
         super().__init__(csp)
         self._max_steps = max_steps
@@ -40,12 +44,12 @@ class MinConflictsSolver(ConstraintSolver):
     def _min_conflicts_value(self, name, assignment):
         domain = list(self.csp.domains[name])
         shuffle(domain)
-        return min(domain, key=lambda value: self._nconflicts(name, value, assignment))
+        return min(domain, key=lambda value: self._conflicts_count(name, value, assignment))
 
     def _conflicted_variables(self, assignment):
         return [name
                 for name in self.csp.variables
-                if self._nconflicts(name, assignment[name], assignment) > 0]
+                if self._conflicts_count(name, assignment[name], assignment) > 0]
 
     def _initial_complete_assignment(self):
         assignment = {}
@@ -59,7 +63,7 @@ class MinConflictsSolver(ConstraintSolver):
 
     def _min_conflicts(self, assignment):
         for step in range(self._max_steps):
-            print('Step ', step)
+            # print('Step ', step)
             conflicted = self._conflicted_variables(assignment)
 
             if not conflicted:
@@ -78,7 +82,7 @@ class MinConflictsSolver(ConstraintSolver):
         return assignment, is_valid
 
 
-class BacktrackingSolver(ConstraintSolver):
+class BacktrackingSolver(Solver):
     def __init__(self, csp):
         super().__init__(csp)
         self.unassigned_variables = deepcopy(self.csp.variables)
@@ -89,12 +93,12 @@ class BacktrackingSolver(ConstraintSolver):
 
         name = min(
             unassigned_variables,
-            key=lambda name: len(self.csp.domains[name]))
+            key=lambda n: len(self.csp.domains[n]))
 
         return name
 
     def _order_domain_values(self, name, assignment):
-        return sorted(self.csp.domains[name], key=lambda value: self._nconflicts(name, value, assignment))
+        return sorted(self.csp.domains[name], key=lambda value: self._conflicts_count(name, value, assignment))
 
     def assign(self, name, value, assignment):
         self.csp.assign(name, value, assignment)
@@ -114,7 +118,7 @@ class BacktrackingSolver(ConstraintSolver):
         ordered_domain = self._order_domain_values(name, assignment)
 
         for value in ordered_domain:
-            if self._nconflicts(name, value, assignment) == 0:
+            if self._conflicts_count(name, value, assignment) == 0:
                 self.assign(name, value, assignment)
                 removals = self.csp.suppose(name, value)
 

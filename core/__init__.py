@@ -1,4 +1,4 @@
-from .Constraint import *
-from .CSP import *
-from .Inference import *
-from .ConstraintSolver import MinConflictsSolver, BacktrackingSolver
+from .constraints import *
+from .problem import *
+from .inference import AC3, MAC
+from .solver import MinConflictsSolver, BacktrackingSolver

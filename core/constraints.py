@@ -14,6 +14,15 @@ class Constraint:
         return self.condition(*input)
 
 
+# No Matter
+
+def no_constraints():
+    def constraint(*params):
+        return True
+
+    return constraint
+
+
 # Equality
 
 

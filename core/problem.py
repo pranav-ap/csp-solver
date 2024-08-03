@@ -1,9 +1,9 @@
-from .Constraint import Constraint
+from .constraints import Constraint
 from itertools import product
 from collections import defaultdict, namedtuple
 
 
-class NaryCSP:
+class Problem:
     def __init__(self) -> None:
         self.variables = set()  # just the names
         self.constraints = []  # [Constraint]
@@ -21,7 +21,8 @@ class NaryCSP:
             self.add_variable(name, domain)
 
     def add_constraint(self, constraint, parameters=None):  # params is a list
-        parameters = parameters or list(self.variables)
+        if parameters is None:
+            parameters = list(self.variables)
 
         if not len(parameters):
             raise ValueError('Scope cannot be empty')
@@ -70,7 +71,8 @@ class DualCSP:
         name1, name2 = (name1, name2) if name1 < name2 else (name2, name1)
         return self.overlaps[(name1, name2)]
 
-    def overlap_equality(self, tuple_n1, tuple_n2, common_names):
+    @staticmethod
+    def overlap_equality(tuple_n1, tuple_n2, common_names):
         for name in common_names:
             name = 'attr_' + str(name)
             element_n1 = getattr(tuple_n1, name)
@@ -94,10 +96,12 @@ class DualCSP:
 
     # Assignment
 
-    def assign(self, name, value, assignment):
+    @staticmethod
+    def assign(name, value, assignment):
         assignment[name] = value
 
-    def unassign(self, name, assignment):
+    @staticmethod
+    def unassign(name, assignment):
         if name in assignment:
             del assignment[name]
 
@@ -119,7 +123,7 @@ class DualCSP:
 
 
 class DualCSPBuilder:
-    def __init__(self, csp: NaryCSP):
+    def __init__(self, csp: Problem):
         super().__init__()
         self.csp = csp
         self.dual_csp = DualCSP()

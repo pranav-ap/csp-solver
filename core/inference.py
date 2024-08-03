@@ -2,10 +2,10 @@
 
 
 def revise(csp, X, Y):
-    '''
+    """
     - Revise the domain of X wrt domain of Y
     - Makes X arc consistent wrt Y
-    '''
+    """
     X_domain = csp.domains[X]
     Y_domain = csp.domains[Y]
 
